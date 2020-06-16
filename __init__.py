@@ -42,7 +42,7 @@ def get_challenges():
             Challenges.id,
             Challenges.name,
             Challenges.category
-        ).filter(or_(Challenges.state != 'hidden', Challenges.state is None)).all()
+        ).filter(or_(Challenges.state != 'hidden', Challenges.state is None),Challenges.value != 1).all()
 
         jchals = []
         for x in chals:
@@ -63,9 +63,7 @@ def load(app):
     override_template('scoreboard.html', open(template_path).read())
 
     matrix = Blueprint('matrix', __name__, static_folder='static')
-    users = Blueprint("currentuser", __name__)
     app.register_blueprint(matrix, url_prefix='/matrix')
-    app.register_blueprint(users, url_prefix='/matrix')
 
     def get_standings():
         standings = scoreboard.get_standings()
@@ -77,7 +75,14 @@ def load(app):
                     .join(Challenges, Solves.challenge_id == Challenges.id)
                     .group_by(Challenges.category)
                     .filter(Solves.team_id == teamid)
+                    .filter(Challenges.value != 1)
             )
+            
+            challenge = (db.session.query(Challenges.category,db.func.sum(Challenges.value)).group_by(Challenges.category)).all()
+            #print(team[2])
+            chal_details = {}
+            for i in challenge:
+                chal_details.update({i[0]:i[1]})
 
             freeze = utils.get_config('freeze')
             if freeze:
@@ -98,27 +103,43 @@ def load(app):
                     score.append({"score":0,"cat":i,"date": None,"id":-1})
 
             score = sorted(score, key = lambda i: i["cat"])
-            
 
-            maxscore = {i["date"]:i["score"] for i in score}
-            date = max(maxscore,key=maxscore.get)
-            maxscore = maxscore[date]
+            maxscore = 0
+            temp = []
+            catfil = []
+            count = 0
+
+            for c,i in enumerate(score):
+                if chal_details[i['cat']] == i['score']:
+                    temp.append(i)
+                    catfil.append(i['cat'])
+                    maxscore += i['score']
+                    count += 1
+
+            if maxscore == 0:
+                maxscore = {i["date"]:i["score"] for i in score}
+                date = max(maxscore,key=maxscore.get)
+                maxscore = maxscore[date]
+                cat = {i["cat"]:i["score"] for i in score}
+                cat = max(cat,key=cat.get)
+                catfil.append(cat)
+            else:
+                date = sorted(temp, key = lambda i:i['date'],reverse=True)[0]['date']
+
             
             # Check for the cat with the least date if there are multiple max values 
-            cat = {i["cat"]:i["score"] for i in score}
-            cat = max(cat,key=cat.get)
 
 
             
-            jstandings.append({'teamid': team[0],'cat': cat, 'solves': score, 'name': escape(team[2]),'date':date, 'score': maxscore})
+            jstandings.append({'teamid': team[0],'cat': catfil, 'solves': score, 'name': escape(team[2]),'date':date,'state':count, 'score': maxscore})
             jstandings = sorted(jstandings, key = lambda i: i["date"])
             #for i in jstandings:
             #    print(teamid,i['date'],i['score'])
             jstandings = sorted(jstandings, key = lambda i: i["score"],reverse=True)
+            jstandings = sorted(jstandings, key = lambda i: i["state"],reverse=True)
             #print('next sort')
             #for i in jstandings:
             #    print(i['date'],i['score'])
-            #jstandings[0]['score'] = "King"
         
         db.session.close()
         return jstandings
@@ -177,7 +198,7 @@ def load(app):
         for i, x in enumerate(standings):
             solves = (db.session.query(Solves.challenge_id,Challenges.value,Solves.date)
                     .join(Challenges, Solves.challenge_id == Challenges.id)
-                    .filter(Challenges.category == x['cat'])
+                    .filter(Challenges.category.in_(x['cat']))
                     .filter(Solves.team_id == x['teamid'])
             )
             
@@ -192,6 +213,7 @@ def load(app):
             for s in solves:
                 sol.append({'account_id':x['teamid'],'challenge_id':s[0],'date':s[2],'team_id':x['teamid'],'user_id':x['teamid'],'value':s[1]})
             
+            sol = sorted(sol, key = lambda i: i["date"])
             json['data'].update({str(i + 1):{ 'id': x['teamid'], 'name': escape(x['name']), 'solves': sol}})
         return jsonify(json)
     
@@ -201,7 +223,8 @@ def load(app):
         team = Teams.query.filter_by(id=team_id, banned=False, hidden=False).first_or_404()
         solves = team.get_solves()
         awards = team.get_awards()
-
+        score = 0
+        place = None
         for c,i in enumerate(standings):
             if i['teamid'] == team_id:
                 place = c+1
@@ -226,6 +249,8 @@ def load(app):
         if not user.team_id:
             return render_template("teams/team_enrollment.html")
 
+        score = 0
+        place = None
         team_id = user.team_id
 
         team = Teams.query.filter_by(id=team_id).first_or_404()

@@ -37,6 +37,7 @@ th.chalname {
     font-size:20px;
 }
 .chalking {
+    text-align:center;
     font-size:20px;
     color:orange;
 }
@@ -103,12 +104,12 @@ th.chalname {
         <tbody>
         {% for team in standings %}
             <tr>
-                <td>{{ loop.index }}</td>
-                <td><a href="{{ request.script_root }}/{{ mode }}/{{ team.teamid }}">{{ team.name }}</a>
-                {% if loop.index ==  1 %}
-                <span class="chalking"><b>  ( King ) </b></span>
+                {% if loop.index ==  1 and team.state != 0 %}
+                <td class="chalking"><i class="fas fa-crown"></i></td>
+                {% else %}
+                <td style="text-align:center"><b> {{ loop.index }}</b></td>
                 {% endif %}
-                </td>
+                <td><a href="{{ request.script_root }}/{{ mode }}/{{ team.teamid }}">{{ team.name }}</a></td>
                 {% for chal in team.solves %}
                     <td class="chalmark">
                     {{ chal.score }}
