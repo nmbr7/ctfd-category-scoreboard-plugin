@@ -97,6 +97,7 @@ def load(app):
             for i in solves:
                 score.append({"id":i[0],"score":i[2],"cat":i[1],"date":i[3]})
 
+
             for i in cat:
                 if i not in [j["cat"] for j in score]:
                     #score.append({"score":0,"cat":i,"date":datetime.datetime.utcfromtimestamp(111111111111)})
@@ -104,6 +105,7 @@ def load(app):
 
             score = sorted(score, key = lambda i: i["cat"])
 
+            
             maxscore = 0
             temp = []
             catfil = []
@@ -126,6 +128,8 @@ def load(app):
             else:
                 date = sorted(temp, key = lambda i:i['date'],reverse=True)[0]['date']
 
+            if date == None:
+                continue
             
             # Check for the cat with the least date if there are multiple max values 
 
