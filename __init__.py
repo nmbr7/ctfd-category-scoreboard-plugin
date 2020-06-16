@@ -15,7 +15,7 @@ from sqlalchemy.sql import or_
 
 from CTFd.utils.helpers import get_errors, get_infos
 from CTFd import utils, scoreboard
-from CTFd.models import db, Solves, Challenges, Submissions, Teams
+from CTFd.models import db, Solves, Challenges, Submissions, Teams, Users
 from CTFd.plugins import override_template
 from CTFd.utils.config import is_scoreboard_frozen, ctf_theme, is_users_mode
 from CTFd.utils.config.visibility import challenges_visible, scores_visible
@@ -24,6 +24,11 @@ from CTFd.utils.dates import (
 )
 from CTFd.utils.user import is_admin, authed
 from CTFd.utils.user import get_current_user
+from CTFd.utils.decorators import authed_only
+from CTFd.utils.decorators.visibility import (
+    check_account_visibility,
+    check_score_visibility,
+)
 
 def get_challenges():
     if not is_admin():
@@ -58,7 +63,9 @@ def load(app):
     override_template('scoreboard.html', open(template_path).read())
 
     matrix = Blueprint('matrix', __name__, static_folder='static')
+    users = Blueprint("currentuser", __name__)
     app.register_blueprint(matrix, url_prefix='/matrix')
+    app.register_blueprint(users, url_prefix='/matrix')
 
     def get_standings():
         standings = scoreboard.get_standings()
@@ -111,6 +118,7 @@ def load(app):
             #print('next sort')
             #for i in jstandings:
             #    print(i['date'],i['score'])
+            #jstandings[0]['score'] = "King"
         
         db.session.close()
         return jstandings
@@ -240,6 +248,18 @@ def load(app):
             place=place,
             score_frozen=is_scoreboard_frozen(),
         )
+    
+    @app.route('/api/v1/current/user')
+    @authed_only
+    def currentuser():
+        user = get_current_user()
+        team = Teams.query.filter_by(id=user.team_id).first_or_404()
+
+        return jsonify({
+            "current_username":user.name,
+            "team_id":user.team_id,
+            "team_name":team.name,
+            "userid":user.id})
 
     app.view_functions['scoreboard.listing'] = scoreboard_view
     app.view_functions['teams.private'] = private

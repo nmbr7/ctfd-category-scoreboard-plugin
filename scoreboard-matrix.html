@@ -36,6 +36,10 @@ th.chalname {
 .chalmark {
     font-size:20px;
 }
+.chalking {
+    font-size:20px;
+    color:orange;
+}
 .matrix {
     overflow-x: scroll;
     cursor: grab;
@@ -93,14 +97,18 @@ th.chalname {
                         <div><span>{{ chal }}</span></div>
                     </th></div>
                 {% endfor %}
-                <th width="10%"><b>Best Track Score</b>
+                <th width="10%"><b>Total Score</b>
             </tr>
         </thead>
         <tbody>
         {% for team in standings %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td><a href="{{ request.script_root }}/{{ mode }}/{{ team.teamid }}">{{ team.name }}</a></td>
+                <td><a href="{{ request.script_root }}/{{ mode }}/{{ team.teamid }}">{{ team.name }}</a>
+                {% if loop.index ==  1 %}
+                <span class="chalking"><b>  ( King ) </b></span>
+                {% endif %}
+                </td>
                 {% for chal in team.solves %}
                     <td class="chalmark">
                     {{ chal.score }}
