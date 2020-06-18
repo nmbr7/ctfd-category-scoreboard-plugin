@@ -78,6 +78,7 @@ def load(app):
                     .group_by(Challenges.category)
                     .filter(Solves.team_id == teamid)
                     .filter(Challenges.value != 1)
+                    .filter(Challenges.value != 0)
             )
             
             challenge = (db.session.query(Challenges.category,db.func.sum(Challenges.value)).group_by(Challenges.category)).all()
@@ -201,7 +202,7 @@ def load(app):
 
         standings = get_standings()
 
-        for i, x in enumerate(standings):
+        for i, x in enumerate(standings[:10]):
             solves = (db.session.query(Solves.challenge_id,Challenges.value,Solves.date)
                     .join(Challenges, Solves.challenge_id == Challenges.id)
                     .filter(Challenges.category.in_(x['cat']))
