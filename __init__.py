@@ -293,7 +293,7 @@ def load(app):
             except (OSError, IOError):
                 get_stream_key = None
         #print(get_stream_key)
-        if get_stream_key is None or (get_stream_key) < 2:
+        if get_stream_key is None or len(get_stream_key) < 2:
             print("Error: ********** getstream_key is None or is not in valid format ***********")
             return
         client = stream_chat.StreamChat(api_key=get_stream_key[0].strip(), api_secret=get_stream_key[1].strip())
