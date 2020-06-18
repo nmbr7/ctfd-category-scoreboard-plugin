@@ -1,6 +1,6 @@
 import os
 import datetime
-
+import stream_chat
 from flask import (
     render_template,
     jsonify,
@@ -29,6 +29,8 @@ from CTFd.utils.decorators.visibility import (
     check_account_visibility,
     check_score_visibility,
 )
+
+
 
 def get_challenges():
     if not is_admin():
@@ -281,14 +283,36 @@ def load(app):
     @app.route('/api/v1/current/user')
     @authed_only
     def currentuser():
+        if not os.getenv("GETSTREAM_KEYS"):
+            # Attempt to read the secret from the secret file
+            # from CTFd/.get_stream_secrets
+            # This will fail if the secret has not been written
+            try:
+                with open(".get_stream_secrets", "rb") as secret:
+                    get_stream_key = secret.readlines()
+            except (OSError, IOError):
+                get_stream_key = None
+        #print(get_stream_key)
+        if get_stream_key is None or (get_stream_key) < 2:
+            print("Error: ********** getstream_key is None or is not in valid format ***********")
+            return
+        client = stream_chat.StreamChat(api_key=get_stream_key[0].strip(), api_secret=get_stream_key[1].strip())
         user = get_current_user()
-        team = Teams.query.filter_by(id=user.team_id).first_or_404()
+        team = Teams.query.filter_by(id=user.team_id).first()
+        if team:
+            team_name = team.name
+            team_id   = user.team_id
+        else:
+            team_name = "No_Team"
+            team_id   = "No Team id"
 
+        user_key = client.create_token(str(user.id))
         return jsonify({
             "current_username":user.name,
-            "team_id":user.team_id,
-            "team_name":team.name,
-            "userid":user.id})
+            "team_id":team_id,
+            "team_name":team_name,
+            "userid":user.id,
+            "user_key":user_key,})
 
     app.view_functions['scoreboard.listing'] = scoreboard_view
     app.view_functions['teams.private'] = private
