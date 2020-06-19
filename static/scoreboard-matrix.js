@@ -138,7 +138,7 @@ function update() {
 
 }
 $(() => {
-  setInterval(update, 60000); // Update scores every 5 minutes
+  setInterval(update, 360000); // Update scores every 5 minutes
   createGraph();
   updateGraph();
 });
